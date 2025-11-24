@@ -76,12 +76,12 @@ export function ToolCall({ part }: { part: ToolCallPart }) {
 
     return (
         <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="flex items-center gap-2 text-muted-foreground shrink-0">
                 {toolDisplay.call_icon}
                 <Shimmer duration={1}>{toolDisplay.call_label}</Shimmer>
             </div>
             {toolDisplay.formatArgs && formattedArgs && (
-                <span className="text-muted-foreground/75 truncate">
+                <span className="text-muted-foreground/75 flex-1 min-w-0 truncate">
                     {formattedArgs}
                 </span>
             )}
@@ -99,12 +99,12 @@ export function ToolResult({ part }: { part: ToolResultPart }) {
 
     return (
         <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="flex items-center gap-2 text-muted-foreground shrink-0">
                 {toolDisplay.result_icon}
                 <span>{toolDisplay.result_label}</span>
             </div>
             {toolDisplay.formatArgs && formattedArgs && (
-                <span className="text-muted-foreground/75 truncate">
+                <span className="text-muted-foreground/75 flex-1 min-w-0 truncate">
                     {formattedArgs}
                 </span>
             )}

@@ -7,7 +7,7 @@ const exa = new Exa(process.env.EXA_API_KEY);
 export const webSearch = tool({
   description: 'Search the web for up-to-date information',
   inputSchema: z.object({
-    query: z.string().min(1).max(100).describe('The search query'),
+    query: z.string().min(1).describe('The search query'),
   }),
   execute: async ({ query }) => {
     try {
