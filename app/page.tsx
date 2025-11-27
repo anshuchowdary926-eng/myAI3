@@ -15,7 +15,7 @@ import { ChatHeader, ChatHeaderBlock } from "@/app/parts/chat-header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UIMessage } from "ai";
 import { useEffect, useState, useRef } from "react";
-import { AI_NAME, CLEAR_CHAT_TEXT, OWNER_NAME, WELCOME_MESSAGE } from "@/config";
+import { AI_NAME, CLEAR_CHAT_TEXT } from "@/config";
 import Link from "next/link";
 
 // -----------------------------
@@ -43,7 +43,7 @@ const loadMessagesFromStorage = () => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return { messages: [], durations: {} };
-    return JSON.parse(stored);
+    return JSON.parse(stored) as StorageData;
   } catch {
     return { messages: [], durations: {} };
   }
@@ -58,7 +58,7 @@ const saveMessagesToStorage = (
 };
 
 // -----------------------------
-// SCHENGEN COUNTRIES LIST
+// SCHENGEN COUNTRIES & CITIES
 // -----------------------------
 const SCHENGEN_COUNTRIES = [
   "france",
@@ -90,24 +90,87 @@ const SCHENGEN_COUNTRIES = [
   "greece",
 ];
 
+const SCHENGEN_CITIES = [
+  "paris",
+  "berlin",
+  "munich",
+  "frankfurt",
+  "rome",
+  "milan",
+  "venice",
+  "florence",
+  "madrid",
+  "barcelona",
+  "valencia",
+  "lisbon",
+  "porto",
+  "vienna",
+  "prague",
+  "zurich",
+  "geneva",
+  "oslo",
+  "stockholm",
+  "copenhagen",
+  "helsinki",
+  "brussels",
+  "budapest",
+  "warsaw",
+  "krakow",
+  "amsterdam",
+  "rotterdam",
+  "the hague"
+];
+
+// Very generous Schengen-visa detector.
+// It will treat ANY visa/Schengen/embassy/VFS question as valid,
+// even if there are multiple countries, cities, or regions in one message.
 function isSchengenQuery(msg: string) {
   const m = msg.toLowerCase();
 
-  // detect country by name
-  if (SCHENGEN_COUNTRIES.some((c) => m.includes(c))) return true;
+  // 1) If it clearly talks about visas / Schengen / consulates / VFS → accept
+  const visaKeywords = [
+    "visa",
+    "schengen",
+    "vfs",
+    "tlscontact",
+    "bls",
+    "embassy",
+    "consulate",
+    "appointment",
+    "biometric",
+    "residence permit",
+    "national visa",
+    "type d",
+    "type c",
+    "short stay",
+    "long stay",
+    "travel insurance",
+    "itinerary",
+    "proof of funds",
+    "blocked account",
+    "student visa",
+    "work visa",
+    "tourist visa",
+    "visitor visa",
+    "business visa",
+    "vac centre",
+    "visa application centre"
+  ];
 
-  // detect visa hints
-  if (
-    m.includes("visa") ||
-    m.includes("vfs") ||
-    m.includes("appointment") ||
-    m.includes("embassy") ||
-    m.includes("consulate") ||
-    m.includes("short stay") ||
-    m.includes("schengen")
-  )
+  if (visaKeywords.some((w) => m.includes(w))) {
     return true;
+  }
 
+  // 2) If it mentions any Schengen country or major city → accept
+  if (SCHENGEN_COUNTRIES.some((c) => m.includes(c))) return true;
+  if (SCHENGEN_CITIES.some((c) => m.includes(c))) return true;
+
+  // 3) Generic references to Europe / EU (often still visa-related in this project)
+  if (m.includes("europe") || m.includes("eu country") || m.includes("eu visa")) {
+    return true;
+  }
+
+  // Otherwise we treat it as out-of-scope
   return false;
 }
 
@@ -125,7 +188,7 @@ const CAPABILITY_RESPONSE = `Here’s what I can help you with as a Schengen Vis
 • Signatures & declarations  
 • Interview preparation  
 
-Ask me anything related to a **Schengen visa**, including country-specific guidance for France, Germany, Italy, Spain, Netherlands, Finland, Belgium, Czech Republic, Austria, Switzerland, Norway, Denmark, Estonia, Latvia, Lithuania, Slovakia, Slovenia, Hungary, Poland, Malta, Luxembourg, Iceland and Liechtenstein.`;
+You can also ask about multiple Schengen countries or cities in one message (for example: "France and Germany study visa documents for an Indian applicant"), and I’ll answer for each where possible.`;
 
 // -----------------------------
 // MAIN CHAT COMPONENT
@@ -133,29 +196,28 @@ Ask me anything related to a **Schengen visa**, including country-specific guida
 export default function Chat() {
   const [isClient, setIsClient] = useState(false);
   const [durations, setDurations] = useState<Record<string, number>>({});
-  const welcomeMessageShownRef = useRef(false);
 
   const stored =
     typeof window !== "undefined"
       ? loadMessagesFromStorage()
       : { messages: [], durations: {} };
-  const [initialMessages] = useState<UIMessage[]>(stored.messages);
+  const [initialMessages] = useState<UIMessage[]>(stored.messages || []);
 
   const { messages, sendMessage, status, stop, setMessages } = useChat({
     messages: initialMessages,
     async onSend(message) {
       const m = message.text.toLowerCase();
 
-      // 1. Greet normally
-      if (["hi", "hello", "hey"].includes(m)) {
+      // 1. Greetings
+      if (["hi", "hello", "hey"].includes(m.trim())) {
         return {
           role: "assistant",
           content:
-            "Hi! I can help you with Schengen visa guidance. Ask me about documents, proofs, accommodation, travel, sponsorship, insurance, or interview prep. Which country are you applying for?",
+            "Hi! I can help you with Schengen visa guidance. Tell me which country or countries you’re applying to, your purpose (tourist, study, work, etc.), and that you are an Indian applicant.",
         };
       }
 
-      // 2. If user asks "what can you do"
+      // 2. Capability / purpose questions
       if (
         m.includes("what can you do") ||
         m.includes("what are you built for") ||
@@ -164,16 +226,16 @@ export default function Chat() {
         return { role: "assistant", content: CAPABILITY_RESPONSE };
       }
 
-      // 3. Reject non-Schengen, non-visa topics
+      // 3. Restriction check — only block if clearly not Schengen/visa
       if (!isSchengenQuery(m)) {
         return {
           role: "assistant",
           content:
-            "Sorry, I'm not built for that. I can only help with Schengen visa–related questions.",
+            "Sorry, I'm not built for that. I can only help with Schengen visa–related questions for Indian applicants.",
         };
       }
 
-      // 4. Otherwise — ALLOW normal response
+      // 4. Valid Schengen visa query → let backend model answer
       return null;
     },
   });
@@ -183,8 +245,8 @@ export default function Chat() {
   // -----------------------------
   useEffect(() => {
     setIsClient(true);
-    setDurations(stored.durations);
-    setMessages(stored.messages);
+    setDurations(stored.durations || {});
+    setMessages(stored.messages || []);
   }, []);
 
   useEffect(() => {
@@ -209,7 +271,7 @@ export default function Chat() {
   }
 
   // -----------------------------
-  // UI (unchanged)
+  // UI
   // -----------------------------
   return (
     <div className="relative flex h-screen items-center justify-center font-sans">
@@ -236,7 +298,7 @@ export default function Chat() {
                   {AI_NAME}
                 </p>
                 <p className="text-[11px] text-slate-200">
-                  Schengen visa guidance: documents, checklists & country-specific info.
+                  Schengen visa guidance: documents, proofs, checklists & interview prep.
                 </p>
               </div>
             </ChatHeaderBlock>
@@ -286,7 +348,7 @@ export default function Chat() {
                           <Input
                             {...field}
                             className="h-15 pr-14 pl-5 bg-white/90 rounded-2xl border border-sky-300"
-                            placeholder='Example: "How do I apply for a France visa?"'
+                            placeholder='Example: "I am an Indian applicant. What documents do I need for France and Germany study visas?"'
                             onKeyDown={(e) => {
                               if (e.key === "Enter" && !e.shiftKey) {
                                 e.preventDefault();
@@ -319,6 +381,15 @@ export default function Chat() {
                 </FieldGroup>
               </form>
             </div>
+          </div>
+
+          <div className="w-full px-5 py-3 flex justify-center text-[11px] text-muted-foreground">
+            © {new Date().getFullYear()}{" "}
+            <Link href="/terms" className="underline">
+              Terms of Use
+            </Link>
+            &nbsp;· Schengen visa information assistant (not legal advice) ·
+            Powered by Ringel.AI
           </div>
         </div>
       </main>
