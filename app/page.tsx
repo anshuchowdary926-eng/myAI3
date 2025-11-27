@@ -28,6 +28,28 @@ const formSchema = z.object({
 
 const STORAGE_KEY = "chat-messages";
 
+const CAPABILITY_MESSAGE = `
+I'm a Schengen visa assistant built specifically for students from India.
+
+I stay focused on exactly what you need for your Schengen visa file and interview. I can guide you on:
+
+• Documents required
+• Financial proofs
+• Accommodation proofs
+• Transport proofs
+• Sponsorship
+• Insurance
+• Special category documents
+• Minor (under 18) requirements
+• Signatures and declarations
+
+I can also help you practise visa interview questions and build confident, clear answers based on your documents and situation.
+
+You can ask things like:
+• “Tell me the financial proofs for an Italy student visa”  
+• “Help me answer common interview questions for a France student visa”
+`.trim();
+
 type StorageData = {
   messages: UIMessage[];
   durations: Record<string, number>;
@@ -132,7 +154,44 @@ export default function Chat() {
   });
 
   function onSubmit(data: z.infer<typeof formSchema>) {
-    sendMessage({ text: data.message });
+    const userText = data.message.trim();
+    if (!userText) return;
+
+    const normalized = userText
+      .toLowerCase()
+      .replace(/\?/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const firstQuestionPhrases = [
+      "what can you do for me",
+      "what can u do for me",
+      "what can you do",
+    ];
+
+    // First question: fixed capability + interview-prep answer
+    if (messages.length === 0 && firstQuestionPhrases.includes(normalized)) {
+      const userMessage: UIMessage = {
+        id: `user-${Date.now()}`,
+        role: "user",
+        parts: [{ type: "text", text: userText }],
+      };
+
+      const assistantMessage: UIMessage = {
+        id: `assistant-${Date.now()}`,
+        role: "assistant",
+        parts: [{ type: "text", text: CAPABILITY_MESSAGE }],
+      };
+
+      const newMessages = [...messages, userMessage, assistantMessage];
+      setMessages(newMessages);
+      saveMessagesToStorage(newMessages, durations);
+      form.reset();
+      return;
+    }
+
+    // All other questions → normal backend
+    sendMessage({ text: userText });
     form.reset();
   }
 
