@@ -43,11 +43,19 @@ I stay focused on exactly what you need for your Schengen visa file and intervie
 • Minor (under 18) requirements
 • Signatures and declarations
 
-I can also help you practise visa interview questions and build confident, clear answers based on your documents and situation.
+I can also help you practise Schengen visa interview questions and build confident, clear answers based on your documents and situation.
 
 You can ask things like:
-• “Tell me the financial proofs for an Italy student visa”  
+• “Tell me the financial proofs for an Italy student visa”
 • “Help me answer common interview questions for a France student visa”
+`.trim();
+
+const OUT_OF_SCOPE_MESSAGE = `
+I'm restricted to only one domain:
+
+I can **only** help Indian students with Schengen visa questions – things like documents required, financial proofs, accommodation, transport, sponsorship, insurance, special categories, minor requirements, signatures and interview preparation.
+
+Please ask me a question related to a Schengen visa for an Indian applicant, and I’ll help you with that.
 `.trim();
 
 type StorageData = {
@@ -88,6 +96,50 @@ const saveMessagesToStorage = (
   }
 };
 
+// simple keyword check to keep queries Schengen-visa focused
+function isSchengenVisaQuery(normalized: string): boolean {
+  const keywords = [
+    "schengen",
+    "visa",
+    "vfs",
+    "embassy",
+    "consulate",
+    "appointment",
+    "biometric",
+    "passport",
+    "travel",
+    "itinerary",
+    "flight",
+    "ticket",
+    "accommodation",
+    "hotel",
+    "hostel",
+    "university",
+    "admission",
+    "offer letter",
+    "student visa",
+    "type d",
+    "short stay",
+    "long stay",
+    "france",
+    "germany",
+    "italy",
+    "spain",
+    "netherlands",
+    "documents",
+    "document",
+    "checklist",
+    "sponsorship",
+    "sponsor",
+    "insurance",
+    "medical",
+    "pcc",
+    "police clearance"
+  ];
+
+  return keywords.some((k) => normalized.includes(k));
+}
+
 export default function Chat() {
   const [isClient, setIsClient] = useState(false);
   const [durations, setDurations] = useState<Record<string, number>>({});
@@ -124,6 +176,7 @@ export default function Chat() {
     });
   };
 
+  // add welcome message once
   useEffect(() => {
     if (
       isClient &&
@@ -163,14 +216,22 @@ export default function Chat() {
       .replace(/\s+/g, " ")
       .trim();
 
-    const firstQuestionPhrases = [
+    // how many user messages so far (ignore assistant)
+    const userMessagesSoFar = messages.filter((m) => m.role === "user").length;
+    const isFirstUserQuestion = userMessagesSoFar === 0;
+
+    const introPhrases = [
       "what can you do for me",
       "what can u do for me",
       "what can you do",
+      "who are you",
+      "who r u",
+      "what are you built for",
+      "what are u built for",
     ];
 
-    // First question: fixed capability + interview-prep answer
-    if (messages.length === 0 && firstQuestionPhrases.includes(normalized)) {
+    // 1) FIRST question = intro → show capabilities + interview prep
+    if (isFirstUserQuestion && introPhrases.includes(normalized)) {
       const userMessage: UIMessage = {
         id: `user-${Date.now()}`,
         role: "user",
@@ -190,7 +251,28 @@ export default function Chat() {
       return;
     }
 
-    // All other questions → normal backend
+    // 2) Any other question that is NOT Schengen-visa related → refuse
+    if (!isSchengenVisaQuery(normalized)) {
+      const userMessage: UIMessage = {
+        id: `user-${Date.now()}`,
+        role: "user",
+        parts: [{ type: "text", text: userText }],
+      };
+
+      const assistantMessage: UIMessage = {
+        id: `assistant-${Date.now() + 1}`,
+        role: "assistant",
+        parts: [{ type: "text", text: OUT_OF_SCOPE_MESSAGE }],
+      };
+
+      const newMessages = [...messages, userMessage, assistantMessage];
+      setMessages(newMessages);
+      saveMessagesToStorage(newMessages, durations);
+      form.reset();
+      return;
+    }
+
+    // 3) Valid Schengen visa question → send to backend as usual
     sendMessage({ text: userText });
     form.reset();
   }
@@ -216,13 +298,11 @@ export default function Chat() {
 
       <main className="relative z-10 w-full h-screen">
         {/* HEADER */}
-        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-sky-900/90 via-sky-900/75 to-transparent dark:from-sky-950 dark:via-sky-950/95 dark:to-transparent pb-16 text-slate-50">
+        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-sky-900/90 via-sky-900/75 to-transparent dark:from-sky-950 dark:via-slate-950/95 dark:to-transparent pb-16 text-slate-50">
           <div className="relative">
             <ChatHeader>
-              {/* left spacer */}
               <ChatHeaderBlock />
 
-              {/* center block: EU visa assistant */}
               <ChatHeaderBlock className="justify-center items-center gap-3">
                 <Avatar className="size-9 ring-2 ring-yellow-300 shadow-sm bg-sky-900">
                   <AvatarImage src="/eu-flag.png" />
@@ -235,13 +315,12 @@ export default function Chat() {
                     {AI_NAME || "Schengen Visa Assistant"}
                   </p>
                   <p className="text-[11px] text-slate-200">
-                    Get guidance on Schengen short-stay visas: documents,
-                    checklists, consulate rules, VFS steps & timelines.
+                    Built for Indian students applying for Schengen visas –
+                    documents, proofs, checklists & interview prep only.
                   </p>
                 </div>
               </ChatHeaderBlock>
 
-              {/* right: new chat */}
               <ChatHeaderBlock className="justify-end">
                 <Button
                   variant="outline"
@@ -304,7 +383,7 @@ export default function Chat() {
                             {...field}
                             id="chat-form-message"
                             className="h-15 pr-14 pl-5 bg-white/90 dark:bg-card rounded-2xl border border-sky-300 focus-visible:ring-sky-500 text-sm"
-                            placeholder='Example: "Student from India going to France for 10 days. What documents do I need?"'
+                            placeholder='Try: "What can you do for me" or "What documents do I need for a France student visa?"'
                             disabled={status === "streaming"}
                             aria-invalid={fieldState.invalid}
                             autoComplete="off"
