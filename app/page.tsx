@@ -29,9 +29,9 @@ const formSchema = z.object({
 const STORAGE_KEY = "chat-messages";
 
 const CAPABILITY_MESSAGE = `
-I'm a Schengen visa assistant built specifically for students from India.
+I am built only for one thing: helping Indian students applying for Schengen visas.
 
-I stay focused on exactly what you need for your Schengen visa file and interview. I can guide you on:
+I can help you with:
 
 • Documents required
 • Financial proofs
@@ -42,20 +42,15 @@ I stay focused on exactly what you need for your Schengen visa file and intervie
 • Special category documents
 • Minor (under 18) requirements
 • Signatures and declarations
+• Interview prep questions
 
-I can also help you practise Schengen visa interview questions and build confident, clear answers based on your documents and situation.
-
-You can ask things like:
-• “Tell me the financial proofs for an Italy student visa”
-• “Help me answer common interview questions for a France student visa”
+I cannot answer anything outside these topics.
 `.trim();
 
 const OUT_OF_SCOPE_MESSAGE = `
-I'm restricted to only one domain:
+Sorry, I'm not built for that.
 
-I can **only** help Indian students with Schengen visa questions – things like documents required, financial proofs, accommodation, transport, sponsorship, insurance, special categories, minor requirements, signatures and interview preparation.
-
-Please ask me a question related to a Schengen visa for an Indian applicant, and I’ll help you with that.
+I can only help Indian students with Schengen visa–related questions, such as documents required, financial proofs, accommodation, transport, sponsorship, insurance, special categories, minor requirements, signatures and interview preparation.
 `.trim();
 
 type StorageData = {
@@ -96,7 +91,7 @@ const saveMessagesToStorage = (
   }
 };
 
-// simple keyword check to keep queries Schengen-visa focused
+// Simple keyword check to see if it's a Schengen visa–related query
 function isSchengenVisaQuery(normalized: string): boolean {
   const keywords = [
     "schengen",
@@ -114,18 +109,27 @@ function isSchengenVisaQuery(normalized: string): boolean {
     "accommodation",
     "hotel",
     "hostel",
+    "stay",
     "university",
+    "college",
     "admission",
     "offer letter",
     "student visa",
     "type d",
     "short stay",
     "long stay",
+    "national visa",
     "france",
     "germany",
     "italy",
     "spain",
     "netherlands",
+    "estonia",
+    "latvia",
+    "lithuania",
+    "belgium",
+    "austria",
+    "portugal",
     "documents",
     "document",
     "checklist",
@@ -134,7 +138,10 @@ function isSchengenVisaQuery(normalized: string): boolean {
     "insurance",
     "medical",
     "pcc",
-    "police clearance"
+    "police clearance",
+    "proof of funds",
+    "bank statement",
+    "blocked account"
   ];
 
   return keywords.some((k) => normalized.includes(k));
@@ -176,7 +183,7 @@ export default function Chat() {
     });
   };
 
-  // add welcome message once
+  // Add welcome message once
   useEffect(() => {
     if (
       isClient &&
@@ -216,63 +223,91 @@ export default function Chat() {
       .replace(/\s+/g, " ")
       .trim();
 
-    // how many user messages so far (ignore assistant)
-    const userMessagesSoFar = messages.filter((m) => m.role === "user").length;
-    const isFirstUserQuestion = userMessagesSoFar === 0;
+    // 1) Handle greetings
+    const greetings = ["hi", "hello", "hey", "hii", "heyy", "helo"];
+    const cleaned = normalized.replace(/[^a-z ]/g, "").trim();
 
-    const introPhrases = [
-      "what can you do for me",
-      "what can u do for me",
-      "what can you do",
-      "who are you",
-      "who r u",
-      "what are you built for",
-      "what are u built for",
-    ];
-
-    // 1) FIRST question = intro → show capabilities + interview prep
-    if (isFirstUserQuestion && introPhrases.includes(normalized)) {
-      const userMessage: UIMessage = {
+    if (greetings.includes(cleaned)) {
+      const userMsg: UIMessage = {
         id: `user-${Date.now()}`,
         role: "user",
         parts: [{ type: "text", text: userText }],
       };
 
-      const assistantMessage: UIMessage = {
+      const assistantMsg: UIMessage = {
+        id: `assistant-${Date.now()}`,
+        role: "assistant",
+        parts: [
+          {
+            type: "text",
+            text: "Hi! I’m here to help Indian students with Schengen visas. Ask me about documents, proofs, or interview prep for your visa.",
+          },
+        ],
+      };
+
+      const newMessages = [...messages, userMsg, assistantMsg];
+      setMessages(newMessages);
+      saveMessagesToStorage(newMessages, durations);
+      form.reset();
+      return;
+    }
+
+    // 2) Handle "what can you do / what are you built for / who are you"
+    const capabilityPhrases = [
+      "what can you do",
+      "what can you do for me",
+      "what can u do",
+      "what can u do for me",
+      "who are you",
+      "who r u",
+      "what are you built for",
+      "what are u built for",
+      "what are you made for",
+      "what are u made for",
+    ];
+
+    if (capabilityPhrases.includes(normalized)) {
+      const userMsg: UIMessage = {
+        id: `user-${Date.now()}`,
+        role: "user",
+        parts: [{ type: "text", text: userText }],
+      };
+
+      const assistantMsg: UIMessage = {
         id: `assistant-${Date.now()}`,
         role: "assistant",
         parts: [{ type: "text", text: CAPABILITY_MESSAGE }],
       };
 
-      const newMessages = [...messages, userMessage, assistantMessage];
+      const newMessages = [...messages, userMsg, assistantMsg];
       setMessages(newMessages);
       saveMessagesToStorage(newMessages, durations);
       form.reset();
       return;
     }
 
-    // 2) Any other question that is NOT Schengen-visa related → refuse
+    // 3) If not Schengen-visa related → refuse
     if (!isSchengenVisaQuery(normalized)) {
-      const userMessage: UIMessage = {
+      const userMsg: UIMessage = {
         id: `user-${Date.now()}`,
         role: "user",
         parts: [{ type: "text", text: userText }],
       };
 
-      const assistantMessage: UIMessage = {
+      const assistantMsg: UIMessage = {
         id: `assistant-${Date.now() + 1}`,
         role: "assistant",
         parts: [{ type: "text", text: OUT_OF_SCOPE_MESSAGE }],
       };
 
-      const newMessages = [...messages, userMessage, assistantMessage];
+      const newMessages = [...messages, userMsg, assistantMsg];
       setMessages(newMessages);
       saveMessagesToStorage(newMessages, durations);
       form.reset();
       return;
     }
 
-    // 3) Valid Schengen visa question → send to backend as usual
+    // 4) Valid Schengen visa question → send to backend
     sendMessage({ text: userText });
     form.reset();
   }
