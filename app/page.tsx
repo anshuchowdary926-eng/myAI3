@@ -146,19 +146,26 @@ export default function Chat() {
   }
 
   return (
-    <div className="flex h-screen items-center justify-center font-sans bg-gradient-to-b from-sky-50 via-slate-50 to-blue-50 dark:from-slate-950 dark:via-slate-950 dark:to-black">
-      <main className="w-full h-screen relative">
+    <div className="relative flex h-screen items-center justify-center font-sans">
+      {/* background image with light monuments theme */}
+      <div
+        className="absolute inset-0 bg-cover bg-center bg-fixed opacity-25"
+        style={{ backgroundImage: "url('/bg-europe.png')" }}
+      />
+      {/* soft white/blue overlay for readability */}
+      <div className="absolute inset-0 bg-gradient-to-b from-sky-50/90 via-slate-50/95 to-blue-50/98 dark:from-slate-950/95 dark:via-slate-950/98 dark:to-black/95" />
+
+      <main className="relative z-10 w-full h-screen">
         {/* HEADER */}
-        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-sky-900/90 via-sky-900/70 to-transparent dark:from-sky-950 dark:via-sky-950/90 dark:to-transparent pb-16 text-slate-50">
+        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-sky-900/90 via-sky-900/75 to-transparent dark:from-sky-950 dark:via-sky-950/95 dark:to-transparent pb-16 text-slate-50">
           <div className="relative">
             <ChatHeader>
               {/* left spacer */}
               <ChatHeaderBlock />
 
-              {/* center: EU themed title */}
+              {/* center block: EU visa assistant */}
               <ChatHeaderBlock className="justify-center items-center gap-3">
                 <Avatar className="size-9 ring-2 ring-yellow-300 shadow-sm bg-sky-900">
-                  {/* Put /public/eu-flag.png in your project */}
                   <AvatarImage src="/eu-flag.png" />
                   <AvatarFallback className="bg-sky-900 text-yellow-300 text-xs font-semibold">
                     EU
@@ -170,12 +177,12 @@ export default function Chat() {
                   </p>
                   <p className="text-[11px] text-slate-200">
                     Get guidance on Schengen short-stay visas: documents,
-                    checklists, appointments & timelines.
+                    checklists, consulate rules, VFS steps & timelines.
                   </p>
                 </div>
               </ChatHeaderBlock>
 
-              {/* right: clear chat */}
+              {/* right: new chat */}
               <ChatHeaderBlock className="justify-end">
                 <Button
                   variant="outline"
@@ -238,7 +245,7 @@ export default function Chat() {
                             {...field}
                             id="chat-form-message"
                             className="h-15 pr-14 pl-5 bg-white/90 dark:bg-card rounded-2xl border border-sky-300 focus-visible:ring-sky-500 text-sm"
-                            placeholder='Example: "Student, India → France, short-stay program. What documents do I need?"'
+                            placeholder='Example: "Student from India going to France for 10 days. What documents do I need?"'
                             disabled={status === "streaming"}
                             aria-invalid={fieldState.invalid}
                             autoComplete="off"
@@ -286,7 +293,8 @@ export default function Chat() {
             <Link href="/terms" className="underline">
               Terms of Use
             </Link>
-            &nbsp;· Schengen info assistant (not legal advice) · Powered by&nbsp;
+            &nbsp;· Schengen visa information assistant (not legal advice) ·
+            Powered by&nbsp;
             <Link href="https://ringel.ai/" className="underline">
               Ringel.AI
             </Link>
