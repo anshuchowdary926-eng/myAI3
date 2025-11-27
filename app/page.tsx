@@ -49,7 +49,10 @@ const loadMessagesFromStorage = () => {
   }
 };
 
-const saveMessagesToStorage = (messages: UIMessage[], durations: Record<string, number>) => {
+const saveMessagesToStorage = (
+  messages: UIMessage[],
+  durations: Record<string, number>
+) => {
   if (typeof window === "undefined") return;
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ messages, durations }));
 };
@@ -58,10 +61,33 @@ const saveMessagesToStorage = (messages: UIMessage[], durations: Record<string, 
 // SCHENGEN COUNTRIES LIST
 // -----------------------------
 const SCHENGEN_COUNTRIES = [
-  "france","germany","sweden","netherlands","italy","spain","portugal",
-  "finland","belgium","czech","czech republic","austria","switzerland",
-  "norway","denmark","estonia","latvia","lithuania","slovakia","slovenia",
-  "hungary","poland","malta","luxembourg","iceland","liechtenstein","greece"
+  "france",
+  "germany",
+  "sweden",
+  "netherlands",
+  "italy",
+  "spain",
+  "portugal",
+  "finland",
+  "belgium",
+  "czech",
+  "czech republic",
+  "austria",
+  "switzerland",
+  "norway",
+  "denmark",
+  "estonia",
+  "latvia",
+  "lithuania",
+  "slovakia",
+  "slovenia",
+  "hungary",
+  "poland",
+  "malta",
+  "luxembourg",
+  "iceland",
+  "liechtenstein",
+  "greece",
 ];
 
 function isSchengenQuery(msg: string) {
@@ -79,7 +105,8 @@ function isSchengenQuery(msg: string) {
     m.includes("consulate") ||
     m.includes("short stay") ||
     m.includes("schengen")
-  ) return true;
+  )
+    return true;
 
   return false;
 }
@@ -98,7 +125,7 @@ const CAPABILITY_RESPONSE = `Here’s what I can help you with as a Schengen Vis
 • Signatures & declarations  
 • Interview preparation  
 
-Ask me anything related to a **Schengen visa for an Indian applicant**, including country-specific guidance for France, Germany, Italy, Spain, Netherlands, Finland, Belgium, Czech Republic, Austria, Switzerland, Norway, Denmark, Estonia, Latvia, Lithuania, Slovakia, Slovenia, Hungary, Poland, Malta, Luxembourg, Iceland and Liechtenstein.`;
+Ask me anything related to a **Schengen visa**, including country-specific guidance for France, Germany, Italy, Spain, Netherlands, Finland, Belgium, Czech Republic, Austria, Switzerland, Norway, Denmark, Estonia, Latvia, Lithuania, Slovakia, Slovenia, Hungary, Poland, Malta, Luxembourg, Iceland and Liechtenstein.`;
 
 // -----------------------------
 // MAIN CHAT COMPONENT
@@ -108,20 +135,23 @@ export default function Chat() {
   const [durations, setDurations] = useState<Record<string, number>>({});
   const welcomeMessageShownRef = useRef(false);
 
-  const stored = typeof window !== "undefined" ? loadMessagesFromStorage() : { messages: [], durations: {} };
+  const stored =
+    typeof window !== "undefined"
+      ? loadMessagesFromStorage()
+      : { messages: [], durations: {} };
   const [initialMessages] = useState<UIMessage[]>(stored.messages);
 
   const { messages, sendMessage, status, stop, setMessages } = useChat({
     messages: initialMessages,
     async onSend(message) {
-
       const m = message.text.toLowerCase();
 
       // 1. Greet normally
       if (["hi", "hello", "hey"].includes(m)) {
         return {
           role: "assistant",
-          content: "Hi! I can help you with Schengen visa guidance. Which country and what type of visa are you applying for?"
+          content:
+            "Hi! I can help you with Schengen visa guidance. Ask me about documents, proofs, accommodation, travel, sponsorship, insurance, or interview prep. Which country are you applying for?",
         };
       }
 
@@ -138,13 +168,14 @@ export default function Chat() {
       if (!isSchengenQuery(m)) {
         return {
           role: "assistant",
-          content: "Sorry, I'm not built for that. I can only help Indian students with Schengen visa-related questions."
+          content:
+            "Sorry, I'm not built for that. I can only help with Schengen visa–related questions.",
         };
       }
 
       // 4. Otherwise — ALLOW normal response
       return null;
-    }
+    },
   });
 
   // -----------------------------
@@ -182,12 +213,13 @@ export default function Chat() {
   // -----------------------------
   return (
     <div className="relative flex h-screen items-center justify-center font-sans">
-      <div className="absolute inset-0 bg-cover bg-center bg-fixed opacity-25"
-        style={{ backgroundImage: "url('/bg-europe.png')" }} />
+      <div
+        className="absolute inset-0 bg-cover bg-center bg-fixed opacity-25"
+        style={{ backgroundImage: "url('/bg-europe.png')" }}
+      />
       <div className="absolute inset-0 bg-gradient-to-b from-sky-50/90 via-slate-50/95 to-blue-50/98 dark:from-slate-950/95 dark:via-slate-950/98 dark:to-black/95" />
 
       <main className="relative z-10 w-full h-screen">
-        
         {/* HEADER */}
         <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-sky-900/90 via-sky-900/75 to-transparent pb-16 text-slate-50">
           <ChatHeader>
@@ -195,17 +227,26 @@ export default function Chat() {
             <ChatHeaderBlock className="justify-center items-center gap-3">
               <Avatar className="size-9 ring-2 ring-yellow-300 shadow-sm bg-sky-900">
                 <AvatarImage src="/eu-flag.png" />
-                <AvatarFallback className="bg-sky-900 text-yellow-300 text-xs font-semibold">EU</AvatarFallback>
+                <AvatarFallback className="bg-sky-900 text-yellow-300 text-xs font-semibold">
+                  EU
+                </AvatarFallback>
               </Avatar>
               <div className="flex flex-col">
-                <p className="text-sm font-semibold tracking-tight">{AI_NAME}</p>
+                <p className="text-sm font-semibold tracking-tight">
+                  {AI_NAME}
+                </p>
                 <p className="text-[11px] text-slate-200">
-                  Schengen visa guidance for Indian students: documents, checklists & country-specific info.
+                  Schengen visa guidance: documents, checklists & country-specific info.
                 </p>
               </div>
             </ChatHeaderBlock>
             <ChatHeaderBlock className="justify-end">
-              <Button variant="outline" size="sm" className="cursor-pointer" onClick={clearChat}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="cursor-pointer"
+                onClick={clearChat}
+              >
                 <Plus className="size-3 mr-1" /> {CLEAR_CHAT_TEXT}
               </Button>
             </ChatHeaderBlock>
@@ -214,8 +255,14 @@ export default function Chat() {
 
         {/* MESSAGES */}
         <div className="h-screen overflow-y-auto px-5 py-4 w-full pt-[92px] pb-[150px]">
-          <MessageWall messages={messages} status={status} durations={durations}
-            onDurationChange={(k: any, d: any) => setDurations({ ...durations, [k]: d })} />
+          <MessageWall
+            messages={messages}
+            status={status}
+            durations={durations}
+            onDurationChange={(k: any, d: any) =>
+              setDurations({ ...durations, [k]: d })
+            }
+          />
 
           {status === "submitted" && (
             <div className="flex justify-start max-w-3xl w-full mt-2">
@@ -236,9 +283,10 @@ export default function Chat() {
                     render={({ field }) => (
                       <Field>
                         <div className="relative h-13">
-                          <Input {...field}
+                          <Input
+                            {...field}
                             className="h-15 pr-14 pl-5 bg-white/90 rounded-2xl border border-sky-300"
-                            placeholder='Example: "How do I apply for a France student visa?"'
+                            placeholder='Example: "How do I apply for a France visa?"'
                             onKeyDown={(e) => {
                               if (e.key === "Enter" && !e.shiftKey) {
                                 e.preventDefault();
@@ -247,12 +295,20 @@ export default function Chat() {
                             }}
                           />
                           {(status === "ready" || status === "error") && (
-                            <Button className="absolute right-2 top-2 rounded-full h-10 w-10 bg-sky-700" type="submit">
+                            <Button
+                              className="absolute right-2 top-2 rounded-full h-10 w-10 bg-sky-700"
+                              type="submit"
+                            >
                               <ArrowUp className="size-4" />
                             </Button>
                           )}
-                          {(status === "streaming" || status === "submitted") && (
-                            <Button className="absolute right-2 top-2 rounded-full h-10 w-10 bg-slate-900" type="button" onClick={stop}>
+                          {(status === "streaming" ||
+                            status === "submitted") && (
+                            <Button
+                              className="absolute right-2 top-2 rounded-full h-10 w-10 bg-slate-900"
+                              type="button"
+                              onClick={stop}
+                            >
                               <Square className="size-4" />
                             </Button>
                           )}
@@ -265,7 +321,6 @@ export default function Chat() {
             </div>
           </div>
         </div>
-
       </main>
     </div>
   );
